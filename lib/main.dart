@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 
 String _transformObject(Object? input) {
   try {
@@ -13,7 +14,25 @@ List<String> _effectsToString(List<int> effects) {
 }
 
 void _output(String prefix, List<Object?> input, List<int>? effects) {
-  print("> ${_effectsToString([0, if (effects != null) ...effects])}${prefix.toUpperCase()} ${Logger.dateStringFunction(DateTime.now())} ${input.map((x) => _transformObject(x)).join(" ")}${_effectsToString([0])}");
+  String text = input.map((x) => _transformObject(x)).join(" ");
+  List<String> lines = text.split("\n");
+  bool multiline = lines.length > 1;
+  int width = stdout.terminalColumns;
+
+  if (!multiline) {
+    print("> ${_effectsToString([0, if (effects != null) ...effects])}${prefix.toUpperCase()} ${Logger.dateStringFunction(DateTime.now())} $text${_effectsToString([0])}");
+  } else {
+    //
+  }
+}
+
+enum LoggerType {
+  print,
+  warn,
+  error,
+  verbose,
+  important,
+  any,
 }
 
 class Settings {
@@ -31,28 +50,49 @@ class Logger {
     return now.toIso8601String();
   };
 
+  static void Function(Object? input, List<Object?>? attachments)? onPrint;
+  static void Function(Object? input, List<Object?>? attachments)? onWarn;
+  static void Function(Object? input, List<Object?>? attachments)? onError;
+  static void Function(Object? input, List<Object?>? attachments)? onVerbose;
+  static void Function(Object? input, List<Object?>? attachments)? onImportant;
+  static void Function(LoggerType event, Object? input, List<Object?>? attachments)? onAny;
+
+  static void _onAny(LoggerType event, Object? input, List<Object?>? attachments) {
+    if (onAny != null) onAny!.call(event, input, attachments);
+  }
+
   static void print(Object? input, [List<Object?>? attachments]) {
-    if (!Settings.enabled) return;
+    if (!Settings.enabled) return; // If not enabled
+    if (onPrint != null) onPrint!.call(input, attachments);
+    _onAny(LoggerType.print, input, attachments);
     _output("LOG", [input, if (attachments != null) ...attachments], null);
   }
 
   static void warn(Object? input, [List<Object?>? attachments]) {
-    if (!(Settings.enabled || Settings.publicLogLevel >= 2)) return;
+    if (!(Settings.enabled || Settings.publicLogLevel >= 2)) return; // If not (either enabled or allow public warns or above)
+    if (onWarn != null) onWarn!.call(input, attachments);
+    _onAny(LoggerType.warn, input, attachments);
     _output("WRN", [input, if (attachments != null) ...attachments], [33]);
   }
 
   static void error(Object? input, [List<Object?>? attachments]) {
-    if (!(Settings.enabled || Settings.publicLogLevel >= 1)) return;
+    if (!(Settings.enabled || Settings.publicLogLevel >= 1)) return; // If not (either enabled or all public errors or above)
+    if (onError != null) onError!.call(input, attachments);
+    _onAny(LoggerType.error, input, attachments);
     _output("ERR", [input, if (attachments != null) ...attachments], [31]);
   }
 
   static void verbose(Object? input, [List<Object?>? attachments]) {
-    if (!Settings.enabled || !Settings.verbose) return;
+    if (!Settings.enabled || !Settings.verbose) return; // If not enabled or if not verbose
+    if (onVerbose != null) onVerbose!.call(input, attachments);
+    _onAny(LoggerType.verbose, input, attachments);
     _output("VBS", [input, if (attachments != null) ...attachments], [2]);
   }
 
   static void important(Object? input, [List<Object?>? attachments]) {
-    if (!Settings.enabled) return;
+    if (!Settings.enabled) return; // If not enabled
+    if (onImportant != null) onImportant!.call(input, attachments);
+    _onAny(LoggerType.important, input, attachments);
     _output("IPT", [input, if (attachments != null) ...attachments], [1]);
   }
 
