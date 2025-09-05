@@ -15,7 +15,7 @@ List<String> _effectsToString(List<int> effects) {
   return effects.map((x) => "\x1b[${x}m").toList();
 }
 
-void _output(LoggerType type, String prefix, List<Object?> input, List<int>? effects, String? code) {
+void _output(LoggerType type, String prefix, List<Object?> input, List<int>? effects, Object? code) {
   String text = input.map((x) => _transformObject(x)).join(" ");
   List<String> lines = text.split("\n");
   bool multiline = lines.length > 1;
@@ -93,16 +93,16 @@ class Logger {
   static void Function(Object? input, List<Object?>? attachments)? onPrint;
 
   /// Called when [warn] is called. Logging has to be enabled.
-  static void Function(Object? input, List<Object?>? attachments, String? code)? onWarn;
+  static void Function(Object? input, List<Object?>? attachments, Object? code)? onWarn;
 
   /// Called when [error] is called. Logging has to be enabled.
-  static void Function(Object? input, List<Object?>? attachments, String? code)? onError;
+  static void Function(Object? input, List<Object?>? attachments, Object? code)? onError;
 
   /// Called when [verbose] is called. Logging and verbose both have to be enabled.
-  static void Function(Object? input, List<Object?>? attachments, String? code)? onVerbose;
+  static void Function(Object? input, List<Object?>? attachments, Object? code)? onVerbose;
 
   /// Called when [important] is called. Logging has to be enabled.
-  static void Function(Object? input, List<Object?>? attachments, String? code)? onImportant;
+  static void Function(Object? input, List<Object?>? attachments, Object? code)? onImportant;
 
   /// Called when any logging function is called. Logging has to be enabled.
   static void Function(LoggerType event, Object? input, List<Object?>? attachments)? onAny;
@@ -120,7 +120,7 @@ class Logger {
   }
 
   /// Prints a warning message.
-  static void warn(Object? input, {List<Object?>? attachments, String? code}) {
+  static void warn(Object? input, {List<Object?>? attachments, Object? code}) {
     if (!(Settings.enabled || Settings.publicLogLevel >= 2)) return; // If not (either enabled or allow public warns or above)
     if (onWarn != null) onWarn!.call(input, attachments, code);
     _onAny(LoggerType.warn, input, attachments);
@@ -128,7 +128,7 @@ class Logger {
   }
 
   /// Prints an error message.
-  static void error(Object? input, {List<Object?>? attachments, String? code}) {
+  static void error(Object? input, {List<Object?>? attachments, Object? code}) {
     if (!(Settings.enabled || Settings.publicLogLevel >= 1)) return; // If not (either enabled or all public errors or above)
     if (onError != null) onError!.call(input, attachments, code);
     _onAny(LoggerType.error, input, attachments);
@@ -136,7 +136,7 @@ class Logger {
   }
 
   /// Prints a verbose message, if verbose is enabled.
-  static void verbose(Object? input, {List<Object?>? attachments, String? code}) {
+  static void verbose(Object? input, {List<Object?>? attachments, Object? code}) {
     if (!Settings.enabled || !Settings.verbose) return; // If not enabled or if not verbose
     if (onVerbose != null) onVerbose!.call(input, attachments, code);
     _onAny(LoggerType.verbose, input, attachments);
@@ -144,7 +144,7 @@ class Logger {
   }
 
   /// Prints a bold message.
-  static void important(Object? input, {List<Object?>? attachments, String? code}) {
+  static void important(Object? input, {List<Object?>? attachments, Object? code}) {
     if (!Settings.enabled) return; // If not enabled
     if (onImportant != null) onImportant!.call(input, attachments, code);
     _onAny(LoggerType.important, input, attachments);
@@ -216,4 +216,5 @@ void main(List<String> arguments) {
 
   Logger.warn("Uh oh!");
   Logger.error("Uh oh!");
+  Logger.error("Uh oh, with a code!", code: "ERR_0");
 }
