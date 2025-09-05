@@ -1,4 +1,5 @@
-/// Main library for [Logger].
+/// Main library for styled_logger.
 library;
 
-export 'main.dart' show Logger, PublicLogLevel, LoggerType;
+// Export main functions.
+export 'main.dart' show Logger, LoggerType, PublicLogLevel;
