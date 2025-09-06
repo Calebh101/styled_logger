@@ -1,14 +1,13 @@
 name: styled_logger
-description: A starting point for Dart libraries or applications.
+description: A package for making styled logging. Supports bolding, verbose, warning/error colors, and more.
 version: 1.0.0
-# repository: https://github.com/my_org/my_repo
+repository: https://github.com/Calebh101/styled_logger
 
 environment:
   sdk: ^3.8.1
 
-# Add regular dependencies here.
 dependencies:
-  # path: ^1.8.0
+  web: ^1.1.1
 
 dev_dependencies:
   lints: ^5.0.0

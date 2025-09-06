@@ -1,44 +1,17 @@
+/// Main source file for styled_logger.
+library;
+
 import 'dart:convert';
-import 'dart:io';
 
-String _transformObject(Object? input) {
-  if (input is String) return input;
+import 'platform_non_web.dart' if (dart.library.html) 'platform_web.dart';
 
+/// Stringify any object.
+String transformObject(Object? input) {
   try {
+    if (!(input is Map || input is List)) throw Exception();
     return jsonEncode(input);
   } catch (e) {
     return input.toString();
-  }
-}
-
-List<String> _effectsToString(List<int> effects) {
-  return effects.map((x) => "\x1b[${x}m").toList();
-}
-
-void _output(LoggerType type, String prefix, List<Object?> input, List<int>? effects, Object? code) {
-  String text = input.map((x) => _transformObject(x)).join(" ");
-  List<String> lines = text.split("\n");
-  bool multiline = lines.length > 1;
-  int width = stdout.terminalColumns;
-
-  if (type == LoggerType.warn || type == LoggerType.error) {
-    multiline = true;
-  }
-
-  if (!multiline) {
-    print("> ${_effectsToString([0, if (effects != null) ...effects]).join("")}${prefix.toUpperCase()} ${Logger.dateStringFunction(DateTime.now())} $text${_effectsToString([0]).join("")}");
-  } else {
-    String effect = _effectsToString([0, if (effects != null) ...effects]).join("");
-    String title = ["$prefix ${Logger.dateStringFunction(DateTime.now())}", if (code != null) "Code $code"].join(" - ");
-
-    String dashes(int Function(double value) rounder) => "-" * (rounder(width / 2) - (1 + rounder(title.length / 2)));
-    print("$effect${dashes((x) => x.floor())} $title ${dashes((x) => x.ceil())}");
-
-    for (String line in lines) {
-      print(">$effect $line${_effectsToString([0]).join("")}");
-    }
-
-    print("$effect${"-" * width}");
   }
 }
 
@@ -65,6 +38,8 @@ enum LoggerType {
 
 /// Global settings for the logger.
 class Settings {
+  Settings._();
+
   /// Decides if non-public logging can be shown.
   static bool enabled = false;
 
@@ -77,6 +52,8 @@ class Settings {
 
 /// Main class for providing APIs for logging to the console.
 class Logger {
+  Logger._();
+
   /// Decides if non-public logging can be shown.
   static bool get enabled => Settings.enabled;
 
@@ -99,10 +76,10 @@ class Logger {
   static void Function(Object? input, List<Object?>? attachments, Object? code)? onError;
 
   /// Called when [verbose] is called. Logging and verbose both have to be enabled.
-  static void Function(Object? input, List<Object?>? attachments, Object? code)? onVerbose;
+  static void Function(Object? input, List<Object?>? attachments)? onVerbose;
 
   /// Called when [important] is called. Logging has to be enabled.
-  static void Function(Object? input, List<Object?>? attachments, Object? code)? onImportant;
+  static void Function(Object? input, List<Object?>? attachments)? onImportant;
 
   /// Called when any logging function is called. Logging has to be enabled.
   static void Function(LoggerType event, Object? input, List<Object?>? attachments)? onAny;
@@ -116,39 +93,39 @@ class Logger {
     if (!Settings.enabled) return; // If not enabled
     if (onPrint != null) onPrint!.call(input, attachments);
     _onAny(LoggerType.print, input, attachments);
-    _output(LoggerType.print, "LOG", [input, if (attachments != null) ...attachments], null, null);
+    output(LoggerType.print, "LOG", [input, if (attachments != null) ...attachments], null, null);
   }
 
   /// Prints a warning message.
   static void warn(Object? input, {List<Object?>? attachments, Object? code}) {
-    if (!(Settings.enabled || Settings.publicLogLevel >= 2)) return; // If not (either enabled or allow public warns or above)
+    if (!(Settings.enabled || Settings.publicLogLevel >= _publicLogLevelToInt(PublicLogLevel.warning))) return; // If not (either enabled or allow public warns or above)
     if (onWarn != null) onWarn!.call(input, attachments, code);
     _onAny(LoggerType.warn, input, attachments);
-    _output(LoggerType.warn, "WRN", [input, if (attachments != null) ...attachments], [33], code);
+    output(LoggerType.warn, "WRN", [input, if (attachments != null) ...attachments], [33], code);
   }
 
   /// Prints an error message.
   static void error(Object? input, {List<Object?>? attachments, Object? code}) {
-    if (!(Settings.enabled || Settings.publicLogLevel >= 1)) return; // If not (either enabled or all public errors or above)
+    if (!(Settings.enabled || Settings.publicLogLevel >= _publicLogLevelToInt(PublicLogLevel.error))) return; // If not (either enabled or all public errors or above)
     if (onError != null) onError!.call(input, attachments, code);
     _onAny(LoggerType.error, input, attachments);
-    _output(LoggerType.error, "ERR", [input, if (attachments != null) ...attachments], [31], code);
+    output(LoggerType.error, "ERR", [input, if (attachments != null) ...attachments], [31], code);
   }
 
   /// Prints a verbose message, if verbose is enabled.
-  static void verbose(Object? input, {List<Object?>? attachments, Object? code}) {
+  static void verbose(Object? input, {List<Object?>? attachments}) {
     if (!Settings.enabled || !Settings.verbose) return; // If not enabled or if not verbose
-    if (onVerbose != null) onVerbose!.call(input, attachments, code);
+    if (onVerbose != null) onVerbose!.call(input, attachments);
     _onAny(LoggerType.verbose, input, attachments);
-    _output(LoggerType.verbose, "VBS", [input, if (attachments != null) ...attachments], [2], code);
+    output(LoggerType.verbose, "VBS", [input, if (attachments != null) ...attachments], [2], null);
   }
 
   /// Prints a bold message.
-  static void important(Object? input, {List<Object?>? attachments, Object? code}) {
-    if (!Settings.enabled) return; // If not enabled
-    if (onImportant != null) onImportant!.call(input, attachments, code);
+  static void important(Object? input, {List<Object?>? attachments}) {
+    if (!(Settings.enabled || Settings.publicLogLevel >= _publicLogLevelToInt(PublicLogLevel.important))) return; // If not (either enabled or allow public important logs or above)
+    if (onImportant != null) onImportant!.call(input, attachments,);
     _onAny(LoggerType.important, input, attachments);
-    _output(LoggerType.important, "IPT", [input, if (attachments != null) ...attachments], [1], code);
+    output(LoggerType.important, "IPT", [input, if (attachments != null) ...attachments], [1], null);
   }
 
   /// enable all non-public logging (except for verbose).
@@ -182,6 +159,9 @@ enum PublicLogLevel {
   /// No logs will be shown if logging is not explicitly enabled.
   none,
 
+  /// Warning, error, and important logs will be shown if logging is not explicitely enabled.
+  important,
+
   /// Warning and error logs will be shown if logging is not explicitly enabled.
   warning,
 
@@ -193,12 +173,14 @@ PublicLogLevel _intToPublicLogLevel(int x) {
   if (x == 0) return PublicLogLevel.none;
   if (x == 1) return PublicLogLevel.error;
   if (x == 2) return PublicLogLevel.warning;
+  if (x == 3) return PublicLogLevel.important;
   throw RangeError("Invalid log level: $x");
 }
 
 int _publicLogLevelToInt(PublicLogLevel level) {
   switch (level) {
     case PublicLogLevel.none: return 0;
+    case PublicLogLevel.important: return 3;
     case PublicLogLevel.warning: return 2;
     case PublicLogLevel.error: return 1;
   }
@@ -215,6 +197,23 @@ void main(List<String> arguments) {
   Logger.verbose("You should see this.");
 
   Logger.warn("Uh oh!");
+  Logger.warn("Uh oh, with a code!", code: 3);
   Logger.error("Uh oh!");
   Logger.error("Uh oh, with a code!", code: "ERR_0");
+  Logger.important("This is a big boy message.");
+
+  Logger.disable();
+  Logger.setPublicLogLevel(PublicLogLevel.important);
+  Logger.important("This is another big boy message.");
+  Logger.setPublicLogLevel(PublicLogLevel.warning);
+  Logger.important("This is a hidden big boy message.");
+  Logger.warn("This is a warning!");
+  Logger.setPublicLogLevel(PublicLogLevel.error);
+  Logger.warn("This is a hidden warning!");
+  Logger.error("This is an error!");
+  Logger.setPublicLogLevel(PublicLogLevel.none);
+  Logger.error("This is a hidden error!");
+
+  Logger.print("This is a hidden log!");
+  Logger.verbose("This is a hidden verbose log!");
 }
