@@ -3,7 +3,7 @@ library;
 
 import 'dart:convert';
 
-import 'platform_non_web.dart' if (dart.library.html) 'platform_web.dart';
+import 'platform_web.dart' if (dart.library.io) 'platform_non_web.dart';
 
 /// Stringify any object.
 String transformObject(Object? input) {
