@@ -12,7 +12,7 @@ final bool isWeb = true;
 /// Represents the "terminal width".
 final int terminalWidth = 10;
 
-/// Custom manager for how to print to the console.
+/// Uses native console APIs to print to the console.
 void output(LoggerType type, String prefix, List<Object?> input, List<int>? effects, Object? code) {
   String string = "$prefix: ${input.map((x) => transformObject(x)).join(" ")}";
   JSString data = string.toJS;

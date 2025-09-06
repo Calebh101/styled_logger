@@ -1,4 +1,9 @@
-import 'package:styled_logger/styled_logger.dart';
+/// A file specifically made for running tests. To run these tests, run this command:
+/// 
+/// `dart run lib/src/test.dart`
+library;
+
+import 'main.dart';
 
 void main(List<String> arguments) {
   Logger.enable();

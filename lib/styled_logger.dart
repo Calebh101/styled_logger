@@ -2,4 +2,4 @@
 library;
 
 // Export main functions.
-export 'main.dart' show Logger, LoggerType, PublicLogLevel;
+export 'src/main.dart' show Logger, LoggerType, PublicLogLevel;
