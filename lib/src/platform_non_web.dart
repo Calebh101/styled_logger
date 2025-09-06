@@ -19,7 +19,7 @@ void output(LoggerType type, String prefix, List<Object?> input, List<int>? effe
   int width = terminalWidth - 2;
   String effect = _effectsToString([0, if (effects != null) ...effects]).join("");
   String reset = _effectsToString([0]).join("");
-  String title = ["$prefix ${Logger.dateStringFunction(DateTime.now())}", if (code != null) "Code ${transformObject(code)}"].join(" - ");
+  String title = ["$prefix ${Logger.dateStringFunction(DateTime.now().toUtc())}", if (code != null) "Code ${transformObject(code)}"].join(" - ");
 
   if (type == LoggerType.warn || type == LoggerType.error) {
     multiline = true;

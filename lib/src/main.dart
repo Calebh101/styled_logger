@@ -47,7 +47,7 @@ class Settings {
   static bool verbose = false;
 
   /// Decides what logs will be shown even when logging has not been enabled.
-  static int publicLogLevel = _publicLogLevelToInt(PublicLogLevel.warning);
+  static int publicLogLevel = _publicLogLevelToInt(PublicLogLevel.error);
 }
 
 /// Main class for providing APIs for logging to the console.
@@ -58,13 +58,13 @@ class Logger {
   static bool get enabled => Settings.enabled;
 
   /// Decides if verbose messages can be shown. Verbose messages cannot be shown if [enabled] is false.
-  static bool get verboseEnabled => Settings.verbose;
+  static bool get verboseEnabled => Settings.enabled && Settings.verbose;
 
-  /// Decides what logs will be shown even when logging has not been enabled.
+  /// Decides what logs will be shown even when logging has not been enabled. This defaults to [PublicLogLevel.error].
   static PublicLogLevel get publicLogLevel => _intToPublicLogLevel(Settings.publicLogLevel);
 
-  /// Function used to determine how to format a date. Defaults to [DateTime.toIso8601String].
-  static String Function(DateTime) dateStringFunction = (DateTime now) => now.toIso8601String();
+  /// Function used to determine how to format a date. [time] is always UTC. Defaults to [DateTime.toIso8601String].
+  static String Function(DateTime) dateStringFunction = (DateTime time) => time.toIso8601String();
 
   /// Called when [print] is called. Logging has to be enabled.
   static void Function(Object? input, List<Object?>? attachments)? onPrint;
@@ -88,7 +88,7 @@ class Logger {
     if (onAny != null) onAny!.call(event, input, attachments);
   }
 
-  /// Prints a message.
+  /// Prints a message, if [enabled] is true.
   static void print(Object? input, {List<Object?>? attachments}) {
     if (!Settings.enabled) return; // If not enabled
     if (onPrint != null) onPrint!.call(input, attachments);
@@ -96,7 +96,7 @@ class Logger {
     output(LoggerType.print, "LOG", [input, if (attachments != null) ...attachments], null, null);
   }
 
-  /// Prints a warning message.
+  /// Prints a warning message, if [enabled] is true, or [publicLogLevel] is at least [PublicLogLevel.warning].
   static void warn(Object? input, {List<Object?>? attachments, Object? code}) {
     if (!(Settings.enabled || Settings.publicLogLevel >= _publicLogLevelToInt(PublicLogLevel.warning))) return; // If not (either enabled or allow public warns or above)
     if (onWarn != null) onWarn!.call(input, attachments, code);
@@ -104,7 +104,7 @@ class Logger {
     output(LoggerType.warn, "WRN", [input, if (attachments != null) ...attachments], [33], code);
   }
 
-  /// Prints an error message.
+  /// Prints an error message, if [enabled] is true, or [publicLogLevel] is at least [PublicLogLevel.error].
   static void error(Object? input, {List<Object?>? attachments, Object? code}) {
     if (!(Settings.enabled || Settings.publicLogLevel >= _publicLogLevelToInt(PublicLogLevel.error))) return; // If not (either enabled or all public errors or above)
     if (onError != null) onError!.call(input, attachments, code);
@@ -112,7 +112,7 @@ class Logger {
     output(LoggerType.error, "ERR", [input, if (attachments != null) ...attachments], [31], code);
   }
 
-  /// Prints a verbose message, if verbose is enabled.
+  /// Prints a verbose message, if both [enabled] and [verboseEnabled] is true.
   static void verbose(Object? input, {List<Object?>? attachments}) {
     if (!Settings.enabled || !Settings.verbose) return; // If not enabled or if not verbose
     if (onVerbose != null) onVerbose!.call(input, attachments);
@@ -120,7 +120,7 @@ class Logger {
     output(LoggerType.verbose, "VBS", [input, if (attachments != null) ...attachments], [2], null);
   }
 
-  /// Prints a bold message.
+  /// Prints a bold message, if [enabled] is true, or [publicLogLevel] is at least [PublicLogLevel.important].
   static void important(Object? input, {List<Object?>? attachments}) {
     if (!(Settings.enabled || Settings.publicLogLevel >= _publicLogLevelToInt(PublicLogLevel.important))) return; // If not (either enabled or allow public important logs or above)
     if (onImportant != null) onImportant!.call(input, attachments,);
@@ -128,7 +128,7 @@ class Logger {
     output(LoggerType.important, "IPT", [input, if (attachments != null) ...attachments], [1], null);
   }
 
-  /// enable all non-public logging (except for verbose).
+  /// Enable all non-public logging (except for verbose).
   static void enable() {
     Settings.enabled = true;
   }
@@ -136,6 +136,11 @@ class Logger {
   /// Disable all non-public logging.
   static void disable() {
     Settings.enabled = false;
+  }
+
+  /// Enable or disable non-public logging, according to [status].
+  static void setEnabled(bool status) {
+    Settings.enabled = status;
   }
 
   /// Enable verbose logs.
@@ -148,25 +153,35 @@ class Logger {
     Settings.verbose = false;
   }
 
+  /// Enable or disable verbose logging, according to [status].
+  static void setVerbose(bool status) {
+    Settings.verbose = status;
+  }
+
   /// Decides what logs will be shown even when logging has not been enabled.
   static void setPublicLogLevel(PublicLogLevel level) {
     Settings.publicLogLevel = _publicLogLevelToInt(level);
   }
 }
 
-/// Decides what logs will be shown even when logging has not been enabled.
+/// Decides what logs will be shown even when logging has not been enabled. These are the different levels, from "lowest" to "highest":
+/// 
+/// - [PublicLogLevel.none]
+/// - [PublicLogLevel.error]
+/// - [PublicLogLevel.warning]
+/// - [PublicLogLevel.important]
 enum PublicLogLevel {
   /// No logs will be shown if logging is not explicitly enabled.
   none,
 
-  /// Warning, error, and important logs will be shown if logging is not explicitely enabled.
-  important,
+  /// Only error logs will be shown if logging is not explicitly enabled.
+  error,
 
   /// Warning and error logs will be shown if logging is not explicitly enabled.
   warning,
 
-  /// Only error logs will be shown if logging is not explicitly enabled.
-  error,
+  /// Warning, error, and important logs will be shown if logging is not explicitely enabled.
+  important,
 }
 
 PublicLogLevel _intToPublicLogLevel(int x) {
